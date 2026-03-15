@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Rulesets{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Rulesets</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+    <div>
+        <h1><i class="fa-solid fa-sliders me-2" style="color: var(--accent-purple)"></i>Rulesets</h1>
+        <p>Customizable rule configurations for network analysis</p>
+    </div>
+    <a href="{% url 'rules:ruleset_create' %}" class="btn btn-primary">
+        <i class="fa-solid fa-plus me-1"></i> New Ruleset
+    </a>
+</div>
+
+{% if rulesets %}
+<div class="row g-3">
+    {% for rs in rulesets %}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 style="margin:0;font-size:15px;font-weight:600">
+                            {{ rs.name }}
+                            {% if rs.is_default %}
+                            <span class="badge badge-success ms-2" style="font-size:10px">Default</span>
+                            {% endif %}
+                        </h5>
+                        {% if rs.description %}<div style="color:var(--text-muted);font-size:12px;margin-top:4px">{{ rs.description|truncatewords:20 }}</div>{% endif %}
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-ghost btn-sm" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="background:var(--bg-card);border-color:var(--border)">
+                            <li><a class="dropdown-item" href="{% url 'rules:ruleset_detail' rs.pk %}" style="color:var(--text-primary);font-size:13px"><i class="fa-solid fa-eye me-2"></i>View</a></li>
+                            <li><a class="dropdown-item" href="{% url 'rules:ruleset_edit' rs.pk %}" style="color:var(--text-primary);font-size:13px"><i class="fa-solid fa-pen me-2"></i>Edit</a></li>
+                            <li><hr class="dropdown-divider" style="border-color:var(--border)"></li>
+                            <li><a class="dropdown-item" href="{% url 'rules:ruleset_delete' rs.pk %}" style="color:var(--accent-red);font-size:13px"><i class="fa-solid fa-trash me-2"></i>Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <div>
+                        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-purple)">{{ rs.rules.count }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Total Rules</div>
+                    </div>
+                    <div>
+                        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-green)">{{ rs.active_rules_count }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Active</div>
+                    </div>
+                </div>
+                <!-- Severity breakdown -->
+                <div class="d-flex gap-2 mt-3">
+                    {% with critical=rs.rules.filter.count %}
+                    {% for rule in rs.rules.all|slice:":5" %}
+                    <span class="badge badge-{{ rule.severity_color }}" style="font-size:10px">{{ rule.get_severity_display }}</span>
+                    {% endfor %}
+                    {% if rs.rules.count > 5 %}<span style="font-size:11px;color:var(--text-muted)">+{{ rs.rules.count|add:"-5" }} more</span>{% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="card-footer" style="background:transparent;border-top:1px solid var(--border);padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--text-muted);font-size:11px"><i class="fa-regular fa-clock me-1"></i>{{ rs.updated_at|timesince }} ago</span>
+                <a href="{% url 'rules:ruleset_detail' rs.pk %}" class="btn btn-primary btn-sm">Manage <i class="fa-solid fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+    <div class="empty-state">
+        <i class="fa-solid fa-sliders"></i>
+        <p>No rulesets yet. Create your first ruleset to enable rule-based analysis.</p>
+        <a href="{% url 'rules:ruleset_create' %}" class="btn btn-primary mt-3">
+            <i class="fa-solid fa-plus me-1"></i> Create Ruleset
+        </a>
+    </div>
+</div></div>
+{% endif %}
+{% endblock %}

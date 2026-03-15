@@ -1,0 +1,85 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2026. All rights reserved.
+
+NOTICE: This software and its source code, documentation, algorithms, data
+structures, and all associated files (collectively, the "Software") are the
+exclusive intellectual property of the copyright holder.
+
+================================================================================
+TERMS AND CONDITIONS
+================================================================================
+
+1. GRANT OF LICENSE
+   No license, right, or permission of any kind is granted to any person or
+   entity to use, copy, modify, merge, publish, distribute, sublicense, sell,
+   or otherwise exploit the Software, in whole or in part, without the prior
+   explicit written consent of the copyright holder.
+
+2. RESTRICTIONS
+   You may NOT, without written authorization:
+
+   a) Copy, reproduce, or duplicate the Software or any portion thereof.
+   b) Modify, adapt, translate, or create derivative works based on the Software.
+   c) Distribute, publish, transmit, or make the Software available to any
+      third party by any means, including but not limited to uploading to
+      public or private repositories, file-sharing platforms, or cloud services.
+   d) Reverse engineer, decompile, disassemble, or attempt to derive the source
+      code or underlying algorithms of any compiled components of the Software.
+   e) Sublicense, rent, lease, loan, or sell access to the Software or any
+      rights therein.
+   f) Remove, alter, or obscure any proprietary notices, labels, or marks on
+      or in the Software.
+   g) Use the Software or any part thereof to train machine learning models,
+      build competing products, or conduct competitive analysis.
+   h) Use the Software in any production environment, commercial system, or
+      revenue-generating activity without a separate signed commercial agreement.
+
+3. PERMITTED USE
+   Viewing this Software is permitted solely for the purpose of private
+   evaluation by explicitly authorized individuals. Any other use requires
+   written permission from the copyright holder.
+
+4. NO WARRANTIES
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+   FOR A PARTICULAR PURPOSE, ACCURACY, OR NON-INFRINGEMENT. THE COPYRIGHT
+   HOLDER MAKES NO REPRESENTATION THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS
+   OR THAT ITS OPERATION WILL BE UNINTERRUPTED OR ERROR-FREE.
+
+5. LIMITATION OF LIABILITY
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR PUNITIVE DAMAGES
+   (INCLUDING BUT NOT LIMITED TO PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+   LOSS OF USE, DATA, OR PROFITS, OR BUSINESS INTERRUPTION) ARISING IN ANY WAY
+   OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE
+   POSSIBILITY OF SUCH DAMAGES.
+
+6. CONFIDENTIALITY
+   The Software and all information contained within it are confidential and
+   proprietary. Recipients who have been granted access for evaluation purposes
+   must not disclose the Software or its contents to any third party and must
+   take all reasonable measures to protect its confidentiality.
+
+7. TERMINATION
+   Any rights granted for evaluation purposes terminate immediately upon:
+   a) Breach of any term of this License.
+   b) Written notice of termination by the copyright holder.
+   Upon termination, you must destroy all copies of the Software in your
+   possession or control.
+
+8. GOVERNING LAW
+   This License shall be governed by and construed in accordance with applicable
+   law. Any disputes arising under or in connection with this License shall be
+   subject to the exclusive jurisdiction of the competent courts.
+
+9. ENTIRE AGREEMENT
+   This License constitutes the entire agreement between the parties with
+   respect to the Software and supersedes all prior or contemporaneous
+   understandings, agreements, or representations.
+
+================================================================================
+FOR LICENSING INQUIRIES, CONTACT THE COPYRIGHT HOLDER DIRECTLY.
+UNAUTHORIZED USE IS A VIOLATION OF COPYRIGHT LAW AND MAY RESULT IN CIVIL
+AND CRIMINAL PENALTIES.
+================================================================================

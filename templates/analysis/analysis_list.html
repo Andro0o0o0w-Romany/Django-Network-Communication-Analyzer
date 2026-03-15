@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Analysis Results{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Analysis Results</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fa-solid fa-chart-network me-2" style="color: var(--accent)"></i>Analysis Results</h1>
+    <p>All network analysis runs across all topologies</p>
+</div>
+
+{% if results %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Network</th>
+                    <th>Date</th>
+                    <th>Ruleset</th>
+                    <th>Risk Score</th>
+                    <th>Fail Points</th>
+                    <th>Violations</th>
+                    <th>Suggestions</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td>
+                        <a href="{% url 'network:topology_detail' r.topology.pk %}" style="color:var(--text-primary);text-decoration:none;font-weight:500">
+                            {{ r.topology.name }}
+                        </a>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted)">{{ r.created_at|date:"M d, Y H:i" }}</td>
+                    <td style="font-size:12px;color:var(--text-secondary)">{{ r.ruleset.name|default:"—" }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge badge-{{ r.risk_color }}">{{ r.risk_score|floatformat:0 }}/100</span>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-critical">{{ r.failure_points_count }}</span></td>
+                    <td><span class="badge badge-warning">{{ r.violations_count }}</span></td>
+                    <td><span class="badge badge-info">{{ r.suggestions_count }}</span></td>
+                    <td>
+                        <a href="{% url 'analysis:analysis_detail' r.pk %}" class="btn btn-ghost btn-sm">
+                            View <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+    <div class="empty-state">
+        <i class="fa-solid fa-chart-network"></i>
+        <p>No analysis results yet. Open a network and run an analysis.</p>
+        <a href="{% url 'network:topology_list' %}" class="btn btn-primary mt-3">View Networks</a>
+    </div>
+</div></div>
+{% endif %}
+{% endblock %}

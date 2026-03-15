@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load network_tags %}
+{% block title %}Run Analysis{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'network:topology_list' %}">Networks</a></li>
+<li class="breadcrumb-item"><a href="{% url 'network:topology_detail' topology.pk %}">{{ topology.name }}</a></li>
+<li class="breadcrumb-item active">Run Analysis</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="page-header">
+            <h1><i class="fa-solid fa-play me-2" style="color: var(--accent-green)"></i>Run Analysis</h1>
+            <p>Analyse <strong>{{ topology.name }}</strong> for failure points, routing, and device placement</p>
+        </div>
+
+        <!-- Network Preview -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-4">
+                        <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent)">{{ topology.node_count }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Nodes</div>
+                    </div>
+                    <div class="col-4">
+                        <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-yellow)">{{ topology.connection_count }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Links</div>
+                    </div>
+                    <div class="col-4">
+                        <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-green)">{{ topology.analyses.count }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Past Runs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-sliders" style="color: var(--accent-purple)"></i>
+                Analysis Configuration
+            </div>
+            <div class="card-body">
+                <form method="post" id="analysis-form">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label">Ruleset (optional)</label>
+                        <select name="ruleset" class="form-select">
+                            <option value="">No ruleset — topology analysis only</option>
+                            {% for rs in rulesets %}
+                            <option value="{{ rs.pk }}" {% if rs.is_default %}selected{% endif %}>
+                                {{ rs.name }} ({{ rs.active_rules_count }} active rules)
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Rulesets define customizable thresholds for evaluating the network.
+                            <a href="{% url 'rules:ruleset_create' %}" style="color: var(--accent)">Create a ruleset</a>
+                        </div>
+                    </div>
+
+                    <!-- What will be analyzed -->
+                    <div style="background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Analysis Includes</div>
+                        <div class="row g-2">
+                            {% for item in "Failure Point Detection,Bridge & Articulation Detection,Optimal Routing (Dijkstra),Alternative Path Analysis,Device Placement Suggestions,Rule Violation Checks,Network Statistics,Risk Score Calculation"|split:"," %}
+                            <div class="col-6">
+                                <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)">
+                                    <i class="fa-solid fa-check-circle" style="color:var(--accent-green)"></i>
+                                    {{ item }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" id="run-btn" style="padding: 12px;">
+                        <i class="fa-solid fa-play me-2"></i> Run Analysis
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('analysis-form').addEventListener('submit', function(e) {
+    const btn = document.getElementById('run-btn');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Analyzing...';
+    btn.disabled = true;
+});
+</script>
+{% endblock %}

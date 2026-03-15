@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load network_tags %}
+{% block title %}Analysis Result{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'network:topology_list' %}">Networks</a></li>
+<li class="breadcrumb-item"><a href="{% url 'network:topology_detail' result.topology.pk %}">{{ result.topology.name }}</a></li>
+<li class="breadcrumb-item active">Analysis</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.tab-nav { display:flex; gap:4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 10px; transition: border-color 0.15s; }
+.result-card:hover { border-color: rgba(255,255,255,0.12); }
+.result-card.critical { border-left: 3px solid var(--accent-red); }
+.result-card.high { border-left: 3px solid var(--accent-yellow); }
+.result-card.medium { border-left: 3px solid var(--accent); }
+.path-node { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.25); border-radius:4px; font-size:11px; font-family:'JetBrains Mono',monospace; }
+.path-arrow { color: var(--accent); font-size: 12px; margin: 0 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header" style="margin-bottom:0">
+        <h1><i class="fa-solid fa-chart-network me-2" style="color: var(--accent)"></i>Analysis Result</h1>
+        <p>{{ result.topology.name }} &middot; {{ result.created_at|date:"M d, Y H:i" }}{% if result.ruleset %} &middot; Ruleset: {{ result.ruleset.name }}{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'analysis:run_analysis' result.topology.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-redo me-1"></i> Re-run
+        </a>
+        <a href="{% url 'analysis:analysis_delete' result.pk %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-trash me-1"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Risk Score Banner -->
+<div class="card mb-4" style="border-color: {% if result.risk_score >= 70 %}rgba(239,68,68,0.4){% elif result.risk_score >= 40 %}rgba(245,158,11,0.4){% else %}rgba(16,185,129,0.4){% endif %}">
+    <div class="card-body">
+        <div class="row align-items-center g-3">
+            <div class="col-md-3 text-center">
+                <div style="font-size:52px; font-weight:800; font-family:'JetBrains Mono',monospace;
+                    color:{% if result.risk_score >= 70 %}var(--accent-red){% elif result.risk_score >= 40 %}var(--accent-yellow){% else %}var(--accent-green){% endif %}">
+                    {{ result.risk_score|floatformat:0 }}
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Risk Score / 100</div>
+                <div class="mt-2">
+                    <span class="badge badge-{{ result.risk_color }}" style="font-size:12px;padding:5px 12px">{{ result.risk_level|title }}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">{{ result.summary }}</div>
+                <div class="risk-meter">
+                    <div class="risk-fill" style="width: {{ result.risk_score }}%;
+                        background: {% if result.risk_score >= 70 %}var(--accent-red){% elif result.risk_score >= 40 %}var(--accent-yellow){% else %}var(--accent-green){% endif %}"></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div style="text-align:center;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.2)">
+                            <div style="font-size:20px;font-weight:700;color:var(--accent-red)">{{ result.failure_points_count }}</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Fail Points</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="text-align:center;padding:10px;background:rgba(245,158,11,0.08);border-radius:8px;border:1px solid rgba(245,158,11,0.2)">
+                            <div style="font-size:20px;font-weight:700;color:var(--accent-yellow)">{{ result.violations_count }}</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Violations</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;border:1px solid rgba(16,185,129,0.2)">
+                            <div style="font-size:20px;font-weight:700;color:var(--accent-green)">{{ result.suggestions_count }}</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Suggestions</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="text-align:center;padding:10px;background:rgba(59,130,246,0.08);border-radius:8px;border:1px solid rgba(59,130,246,0.2)">
+                            <div style="font-size:20px;font-weight:700;color:var(--accent)">{{ stats.node_count }}</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Nodes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(event,'tab-failure')">
+        <i class="fa-solid fa-triangle-exclamation me-1" style="color:var(--accent-red)"></i>
+        Failure Points ({{ result.failure_points_count }})
+    </button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-routing')">
+        <i class="fa-solid fa-route me-1" style="color:var(--accent)"></i>
+        Routing ({{ routing|length }})
+    </button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-suggestions')">
+        <i class="fa-solid fa-lightbulb me-1" style="color:var(--accent-yellow)"></i>
+        Suggestions ({{ result.suggestions_count }})
+    </button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-violations')">
+        <i class="fa-solid fa-circle-exclamation me-1" style="color:var(--accent-red)"></i>
+        Violations ({{ result.violations_count }})
+    </button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-stats')">
+        <i class="fa-solid fa-chart-bar me-1"></i>
+        Statistics
+    </button>
+</div>
+
+<!-- FAILURE POINTS TAB -->
+<div id="tab-failure" class="tab-content active">
+    {% if not failure_points.is_connected %}
+    <div class="alert" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--accent-red)">
+        <i class="fa-solid fa-circle-exclamation me-2"></i>
+        <strong>Network is disconnected!</strong> {{ failure_points.components }} separate components detected.
+    </div>
+    {% endif %}
+
+    {% if failure_points.isolated_nodes %}
+    <div class="alert" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--accent-yellow)">
+        <i class="fa-solid fa-exclamation-triangle me-2"></i>
+        {{ failure_points.isolated_nodes|length }} isolated node(s): {% for n in failure_points.isolated_nodes %}<strong>{{ n.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="section-title"><i class="fa-solid fa-skull-crossbones me-2" style="color:var(--accent-red)"></i>Articulation Points</div>
+            {% if failure_points.articulation_points %}
+                {% for ap in failure_points.articulation_points %}
+                <div class="result-card {{ ap.criticality }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div style="font-weight:600;font-size:13px">{{ ap.name }}</div>
+                            <div style="color:var(--text-muted);font-size:12px;margin-top:2px">{{ ap.node_type|title }} · {{ ap.degree }} connections</div>
+                        </div>
+                        <span class="badge badge-{{ ap.criticality }}">{{ ap.criticality|title }}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-top:8px">
+                        <i class="fa-solid fa-info-circle me-1"></i>{{ ap.reason }}
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                        Isolates {{ ap.nodes_isolated }} node(s) if removed · Creates {{ ap.components_after_removal }} segment(s)
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="result-card" style="border-left: 3px solid var(--accent-green)">
+                    <i class="fa-solid fa-check-circle me-2" style="color:var(--accent-green)"></i>
+                    <span style="font-size:13px;color:var(--accent-green)">No articulation points found. Network is resilient.</span>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <div class="section-title"><i class="fa-solid fa-link-slash me-2" style="color:var(--accent-yellow)"></i>Bridges (Critical Links)</div>
+            {% if failure_points.bridges %}
+                {% for bridge in failure_points.bridges %}
+                <div class="result-card high">
+                    <div style="font-weight:600;font-size:13px">
+                        {{ bridge.source_name }} <span style="color:var(--accent-red)">↔</span> {{ bridge.target_name }}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">
+                        <i class="fa-solid fa-info-circle me-1"></i>{{ bridge.reason }}
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                        Latency: {{ bridge.latency }}ms · Bandwidth: {{ bridge.bandwidth }}Mbps
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="result-card" style="border-left: 3px solid var(--accent-green)">
+                    <i class="fa-solid fa-check-circle me-2" style="color:var(--accent-green)"></i>
+                    <span style="font-size:13px;color:var(--accent-green)">No bridge links found. All links have redundancy.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ROUTING TAB -->
+<div id="tab-routing" class="tab-content">
+    {% if routing %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Optimal Path</th>
+                        <th>Hops</th>
+                        <th>Latency</th>
+                        <th>Bandwidth</th>
+                        <th>Alternatives</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for route in routing %}
+                    <tr {% if route.error %}style="opacity:0.6"{% endif %}>
+                        <td style="font-weight:500;font-size:13px">
+                            {{ route.source_name }} <span style="color:var(--text-muted)">→</span> {{ route.target_name }}
+                        </td>
+                        <td>
+                            {% if route.optimal_path_names %}
+                            <div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center">
+                                {% for node in route.optimal_path_names %}
+                                <span class="path-node">{{ node }}</span>
+                                {% if not forloop.last %}<span class="path-arrow">→</span>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span style="color:var(--accent-red);font-size:12px"><i class="fa-solid fa-ban me-1"></i>{{ route.error }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if route.hop_count is not None %}
+                            <span class="badge {% if route.hop_count <= 3 %}badge-success{% elif route.hop_count <= 6 %}badge-warning{% else %}badge-critical{% endif %}">
+                                {{ route.hop_count }}
+                            </span>
+                            {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
+                        </td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">
+                            {% if route.total_latency is not None %}{{ route.total_latency }}ms{% else %}—{% endif %}
+                        </td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">
+                            {% if route.bottleneck_bandwidth %}{{ route.bottleneck_bandwidth }}Mbps{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if route.path_diversity >= 3 %}badge-success{% elif route.path_diversity >= 2 %}badge-warning{% else %}badge-critical{% endif %}">
+                                {{ route.path_diversity }} path(s)
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-route"></i><p>No routing data available.</p></div></div></div>
+    {% endif %}
+</div>
+
+<!-- SUGGESTIONS TAB -->
+<div id="tab-suggestions" class="tab-content">
+    {% if suggestions %}
+    <div class="row g-3">
+        {% for s in suggestions %}
+        <div class="col-md-6">
+            <div class="result-card {{ s.priority }}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        {% if s.type == 'repeater' %}
+                        <span style="width:32px;height:32px;background:rgba(6,182,212,0.15);color:#06b6d4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                        </span>
+                        {% elif s.type == 'load_balancer' %}
+                        <span style="width:32px;height:32px;background:rgba(236,72,153,0.15);color:#ec4899;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                        </span>
+                        {% elif s.type == 'redundant_node' %}
+                        <span style="width:32px;height:32px;background:rgba(239,68,68,0.15);color:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </span>
+                        {% elif s.type == 'redundant_link' %}
+                        <span style="width:32px;height:32px;background:rgba(245,158,11,0.15);color:#f59e0b;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                            <i class="fa-solid fa-code-branch"></i>
+                        </span>
+                        {% else %}
+                        <span style="width:32px;height:32px;background:rgba(59,130,246,0.15);color:#3b82f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                        {% endif %}
+                        <div>
+                            <div style="font-weight:600;font-size:13px">{{ s.type|replace:"_, "|title }}</div>
+                            <div style="font-size:11px;color:var(--text-muted)">{{ s.location }}</div>
+                        </div>
+                    </div>
+                    <span class="badge {% if s.priority == 'critical' %}badge-critical{% elif s.priority == 'high' %}badge-warning{% else %}badge-info{% endif %}">
+                        {{ s.priority|title }}
+                    </span>
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">{{ s.reason }}</div>
+                <div style="font-size:12px;color:var(--text-muted);font-style:italic"><i class="fa-solid fa-lightbulb me-1" style="color:var(--accent-yellow)"></i>{{ s.details }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body">
+        <div class="empty-state">
+            <i class="fa-solid fa-check-circle" style="color:var(--accent-green)"></i>
+            <p style="color:var(--accent-green)">No device placement issues detected. Network topology looks optimal.</p>
+        </div>
+    </div></div>
+    {% endif %}
+</div>
+
+<!-- VIOLATIONS TAB -->
+<div id="tab-violations" class="tab-content">
+    {% if violations %}
+    {% for v in violations %}
+    <div class="result-card {% if v.severity == 'critical' %}critical{% elif v.severity == 'warning' %}high{% else %}medium{% endif %} mb-3">
+        <div class="d-flex justify-content-between align-items-start">
+            <div style="font-weight:600;font-size:13px">{{ v.rule }}</div>
+            <span class="badge badge-{{ v.severity }}">{{ v.severity|title }}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">{{ v.message }}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+            <span style="font-family:'JetBrains Mono',monospace">{{ v.rule_type }}</span> · {{ v.affected_element }}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card"><div class="card-body">
+        <div class="empty-state">
+            <i class="fa-solid fa-check-circle" style="color:var(--accent-green)"></i>
+            <p style="color:var(--accent-green)">{% if result.ruleset %}No rule violations found.{% else %}No ruleset was applied for this analysis.{% endif %}</p>
+        </div>
+    </div></div>
+    {% endif %}
+</div>
+
+<!-- STATS TAB -->
+<div id="tab-stats" class="tab-content">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-chart-bar" style="color:var(--accent)"></i>Network Metrics</div>
+                <div class="card-body">
+                    <table class="table mb-0">
+                        <tbody>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Nodes</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.node_count }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Links</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.edge_count }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Graph Density</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.density }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Average Degree</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.avg_degree }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Max Degree</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.max_degree }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Clustering Coefficient</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.avg_clustering }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-route" style="color:var(--accent-purple)"></i>Path Metrics</div>
+                <div class="card-body">
+                    <table class="table mb-0">
+                        <tbody>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Connected</td>
+                                <td><span class="badge {% if stats.is_connected %}badge-success{% else %}badge-critical{% endif %}">{% if stats.is_connected %}Yes{% else %}No{% endif %}</span></td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Components</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.components }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Diameter (hops)</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.diameter|default:"N/A" }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Radius</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.radius|default:"N/A" }}</td></tr>
+                            <tr><td style="color:var(--text-muted);font-size:13px">Avg Shortest Path</td><td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ stats.avg_shortest_path|default:"N/A" }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(event, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
+{% endblock %}

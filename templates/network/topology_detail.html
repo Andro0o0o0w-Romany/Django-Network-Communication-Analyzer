@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% block title %}{{ topology.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'network:topology_list' %}">Networks</a></li>
+<li class="breadcrumb-item active">{{ topology.name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.node-type-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:500; }
+.tab-nav { display:flex; gap:4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header" style="margin-bottom:0">
+        <h1><i class="fa-solid fa-diagram-project me-2" style="color: var(--accent)"></i>{{ topology.name }}</h1>
+        {% if topology.description %}<p>{{ topology.description }}</p>{% endif %}
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'network:topology_edit' topology.pk %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-pen me-1"></i> Edit
+        </a>
+        <a href="{% url 'analysis:run_analysis' topology.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-play me-1"></i> Run Analysis
+        </a>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent)">{{ nodes|length }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Nodes</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-yellow)">{{ connections|length }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Links</div>
+        </div>
+    </div>
+    {% if recent_analysis %}
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;
+                color:{% if recent_analysis.risk_score >= 70 %}var(--accent-red){% elif recent_analysis.risk_score >= 40 %}var(--accent-yellow){% else %}var(--accent-green){% endif %}">
+                {{ recent_analysis.risk_score|floatformat:0 }}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Risk Score</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'analysis:analysis_detail' recent_analysis.pk %}" style="text-decoration:none">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-purple)">{{ recent_analysis.failure_points_count }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Failure Points</div>
+        </div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Network Graph -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fa-solid fa-chart-network" style="color: var(--accent)"></i>
+        Network Graph
+        <div class="ms-auto d-flex gap-2 align-items-center">
+            <span style="font-size:11px;color:var(--text-muted)" id="graph-status">Loading...</span>
+            <button class="btn btn-ghost btn-sm" onclick="fitGraph()"><i class="fa-solid fa-maximize me-1"></i>Fit</button>
+            <button class="btn btn-ghost btn-sm" onclick="togglePhysics()"><i class="fa-solid fa-arrows-alt me-1"></i>Physics</button>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 12px">
+        <div id="network-graph"></div>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            <span style="font-size:11px;color:var(--text-muted)">Node types:</span>
+            {% for node in nodes|slice:":8" %}
+            <span class="badge" style="background:{{ node.color }}22;color:{{ node.color }};border:1px solid {{ node.color }}44;font-size:10px">
+                <i class="fa-solid {{ node.icon }} me-1"></i>{{ node.get_node_type_display }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(event,'tab-nodes')"><i class="fa-solid fa-circle-nodes me-1"></i>Nodes ({{ nodes|length }})</button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-connections')"><i class="fa-solid fa-link me-1"></i>Links ({{ connections|length }})</button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-analyses')"><i class="fa-solid fa-chart-network me-1"></i>Analyses ({{ topology.analyses.count }})</button>
+</div>
+
+<!-- Nodes Tab -->
+<div id="tab-nodes" class="tab-content active">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title" style="margin:0">Nodes</div>
+        <a href="{% url 'network:node_create' topology.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Add Node
+        </a>
+    </div>
+    {% if nodes %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Capacity</th>
+                        <th>Delay</th>
+                        <th>IP</th>
+                        <th>Links</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for node in nodes %}
+                    <tr>
+                        <td><strong>{{ node.name }}</strong></td>
+                        <td>
+                            <span class="node-type-pill" style="background:{{ node.color }}22;color:{{ node.color }};border:1px solid {{ node.color }}44">
+                                <i class="fa-solid {{ node.icon }}"></i> {{ node.get_node_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if node.status == 'active' %}badge-success{% elif node.status == 'degraded' %}badge-warning{% elif node.status == 'failed' %}badge-critical{% else %}badge-info{% endif %}">
+                                {{ node.get_status_display }}
+                            </span>
+                        </td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ node.capacity }} Mbps</td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ node.processing_delay }} ms</td>
+                        <td style="color:var(--text-muted);font-size:12px">{{ node.ip_address|default:"—" }}</td>
+                        <td><span class="badge badge-info">{{ node.degree }}</span></td>
+                        <td>
+                            <a href="{% url 'network:node_edit' node.pk %}" class="btn btn-ghost btn-sm me-1"><i class="fa-solid fa-pen"></i></a>
+                            <form method="post" action="{% url 'network:node_delete' node.pk %}" style="display:inline" onsubmit="return confirm('Delete node {{ node.name }}?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body">
+        <div class="empty-state">
+            <i class="fa-solid fa-circle-nodes"></i>
+            <p>No nodes yet. <a href="{% url 'network:node_create' topology.pk %}">Add the first node</a></p>
+        </div>
+    </div></div>
+    {% endif %}
+</div>
+
+<!-- Connections Tab -->
+<div id="tab-connections" class="tab-content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title" style="margin:0">Connections</div>
+        <a href="{% url 'network:connection_create' topology.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Add Link
+        </a>
+    </div>
+    {% if connections %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>From → To</th>
+                        <th>Type</th>
+                        <th>Bandwidth</th>
+                        <th>Latency</th>
+                        <th>Reliability</th>
+                        <th>Distance</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conn in connections %}
+                    <tr>
+                        <td>
+                            <strong>{{ conn.source.name }}</strong>
+                            <span style="color:var(--accent);margin:0 6px">→</span>
+                            <strong>{{ conn.target.name }}</strong>
+                        </td>
+                        <td><span style="color:var(--text-muted);font-size:12px">{{ conn.get_connection_type_display }}</span></td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ conn.bandwidth }} Mbps</td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ conn.latency }} ms</td>
+                        <td>
+                            <span class="badge {% if conn.reliability >= 99 %}badge-success{% elif conn.reliability >= 95 %}badge-warning{% else %}badge-critical{% endif %}">
+                                {{ conn.reliability }}%
+                            </span>
+                        </td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ conn.distance }} m</td>
+                        <td><span class="badge {% if conn.is_active %}badge-success{% else %}badge-critical{% endif %}">{% if conn.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                        <td>
+                            <a href="{% url 'network:connection_edit' conn.pk %}" class="btn btn-ghost btn-sm me-1"><i class="fa-solid fa-pen"></i></a>
+                            <form method="post" action="{% url 'network:connection_delete' conn.pk %}" style="display:inline" onsubmit="return confirm('Delete this connection?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body">
+        <div class="empty-state">
+            <i class="fa-solid fa-link"></i>
+            <p>No connections yet. <a href="{% url 'network:connection_create' topology.pk %}">Add the first link</a></p>
+        </div>
+    </div></div>
+    {% endif %}
+</div>
+
+<!-- Analyses Tab -->
+<div id="tab-analyses" class="tab-content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title" style="margin:0">Analysis History</div>
+        <a href="{% url 'analysis:run_analysis' topology.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-play me-1"></i> New Analysis
+        </a>
+    </div>
+    {% if topology.analyses.all %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Date</th><th>Ruleset</th><th>Risk Score</th><th>Failure Points</th><th>Violations</th><th>Summary</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for a in topology.analyses.all %}
+                    <tr>
+                        <td style="font-size:12px;color:var(--text-muted)">{{ a.created_at|date:"M d, Y H:i" }}</td>
+                        <td style="font-size:12px">{{ a.ruleset.name|default:"No ruleset" }}</td>
+                        <td>
+                            <span class="badge badge-{{ a.risk_color }}">{{ a.risk_score|floatformat:0 }}/100</span>
+                        </td>
+                        <td><span class="badge badge-critical">{{ a.failure_points_count }}</span></td>
+                        <td><span class="badge badge-warning">{{ a.violations_count }}</span></td>
+                        <td style="font-size:12px;color:var(--text-muted)">{{ a.summary|truncatewords:12 }}</td>
+                        <td>
+                            <a href="{% url 'analysis:analysis_detail' a.pk %}" class="btn btn-ghost btn-sm">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body">
+        <div class="empty-state">
+            <i class="fa-solid fa-chart-network"></i>
+            <p>No analyses yet. <a href="{% url 'analysis:run_analysis' topology.pk %}">Run analysis</a></p>
+        </div>
+    </div></div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+const TOPOLOGY_ID = {{ topology.pk }};
+let network, physicsEnabled = true;
+
+function switchTab(event, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+
+function fitGraph() { if (network) network.fit({animation: {duration: 600, easingFunction: 'easeInOutQuad'}}); }
+
+function togglePhysics() {
+    physicsEnabled = !physicsEnabled;
+    if (network) network.setOptions({physics: {enabled: physicsEnabled}});
+}
+
+async function loadGraph() {
+    const container = document.getElementById('network-graph');
+    const resp = await fetch(`/networks/topologies/${TOPOLOGY_ID}/graph-data/`);
+    const data = await resp.json();
+
+    document.getElementById('graph-status').textContent = `${data.nodes.length} nodes, ${data.edges.length} links`;
+
+    const options = {
+        physics: {
+            enabled: true,
+            barnesHut: { gravitationalConstant: -8000, springLength: 160, springConstant: 0.04, damping: 0.15 },
+        },
+        interaction: { hover: true, tooltipDelay: 200, zoomView: true },
+        nodes: {
+            shape: 'dot',
+            size: 22,
+            font: { size: 12, color: '#e2e8f0', face: 'Inter' },
+            borderWidth: 2,
+            shadow: { enabled: true, color: 'rgba(0,0,0,0.4)', blur: 8 },
+        },
+        edges: {
+            width: 2,
+            color: { color: '#374151', highlight: '#3b82f6', hover: '#60a5fa' },
+            font: { size: 10, color: '#6b7280', align: 'middle' },
+            smooth: { type: 'continuous' },
+            shadow: false,
+        },
+    };
+
+    network = new vis.Network(container, { nodes: new vis.DataSet(data.nodes), edges: new vis.DataSet(data.edges) }, options);
+
+    network.on('stabilizationIterationsDone', () => {
+        network.setOptions({ physics: { enabled: false } });
+        physicsEnabled = false;
+        savePositions();
+    });
+}
+
+async function savePositions() {
+    const positions = network.getPositions();
+    const payload = { positions: Object.entries(positions).map(([id, pos]) => ({ id: parseInt(id), x: pos.x, y: pos.y })) };
+    await fetch(`/networks/topologies/${TOPOLOGY_ID}/save-positions/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify(payload),
+    });
+}
+
+loadGraph();
+</script>
+{% endblock %}

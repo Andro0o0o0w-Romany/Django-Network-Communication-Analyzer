@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Delete Network{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'network:topology_list' %}">Networks</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card" style="border-color: rgba(239,68,68,0.3)">
+            <div class="card-header" style="color: var(--accent-red)">
+                <i class="fa-solid fa-triangle-exclamation"></i> Confirm Delete
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete <strong>{{ topology.name }}</strong>? This will also delete all its nodes, connections, and analysis results.</p>
+                <p style="color: var(--accent-red); font-size: 13px"><i class="fa-solid fa-circle-exclamation me-1"></i>This action cannot be undone.</p>
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    <a href="{% url 'network:topology_detail' topology.pk %}" class="btn btn-ghost">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

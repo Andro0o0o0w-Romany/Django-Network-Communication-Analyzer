@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Delete Analysis{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Delete Analysis</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card" style="border-color: rgba(239,68,68,0.3)">
+            <div class="card-header" style="color: var(--accent-red)"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Delete</div>
+            <div class="card-body">
+                <p>Delete analysis result for <strong>{{ result.topology.name }}</strong> from {{ result.created_at|date:"M d, Y H:i" }}?</p>
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                    <a href="{% url 'analysis:analysis_detail' result.pk %}" class="btn btn-ghost">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

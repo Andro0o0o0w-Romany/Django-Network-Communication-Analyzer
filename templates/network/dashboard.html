@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fa-solid fa-gauge-high me-2" style="color: var(--accent)"></i>Dashboard</h1>
+    <p>Overview of your network communication infrastructure</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-glow" style="background: var(--accent)"></div>
+            <div class="stat-icon" style="background: rgba(59,130,246,0.15); color: var(--accent)">
+                <i class="fa-solid fa-diagram-project"></i>
+            </div>
+            <div class="stat-value">{{ stats.total_networks }}</div>
+            <div class="stat-label">Networks</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-glow" style="background: var(--accent-green)"></div>
+            <div class="stat-icon" style="background: rgba(16,185,129,0.15); color: var(--accent-green)">
+                <i class="fa-solid fa-circle-nodes"></i>
+            </div>
+            <div class="stat-value">{{ stats.total_nodes }}</div>
+            <div class="stat-label">Nodes</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-glow" style="background: var(--accent-yellow)"></div>
+            <div class="stat-icon" style="background: rgba(245,158,11,0.15); color: var(--accent-yellow)">
+                <i class="fa-solid fa-link"></i>
+            </div>
+            <div class="stat-value">{{ stats.total_connections }}</div>
+            <div class="stat-label">Connections</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-glow" style="background: var(--accent-purple)"></div>
+            <div class="stat-icon" style="background: rgba(139,92,246,0.15); color: var(--accent-purple)">
+                <i class="fa-solid fa-chart-network"></i>
+            </div>
+            <div class="stat-value">{{ stats.total_analyses }}</div>
+            <div class="stat-label">Analyses Run</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Networks -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-diagram-project" style="color: var(--accent)"></i>
+                Network Topologies
+                <a href="{% url 'network:topology_create' %}" class="btn btn-primary btn-sm ms-auto">
+                    <i class="fa-solid fa-plus me-1"></i> New
+                </a>
+            </div>
+            {% if topologies %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Nodes</th>
+                            <th>Links</th>
+                            <th>Updated</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in topologies %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'network:topology_detail' t.pk %}" style="color: var(--text-primary); text-decoration: none; font-weight: 500;">
+                                    {{ t.name }}
+                                </a>
+                            </td>
+                            <td><span class="badge badge-info">{{ t.node_count }}</span></td>
+                            <td><span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)">{{ t.connection_count }}</span></td>
+                            <td style="color: var(--text-muted); font-size: 12px;">{{ t.updated_at|timesince }} ago</td>
+                            <td>
+                                <a href="{% url 'analysis:run_analysis' t.pk %}" class="btn btn-sm" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3)">
+                                    <i class="fa-solid fa-play me-1"></i> Analyse
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <div class="empty-state">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <p>No networks yet. <a href="{% url 'network:topology_create' %}">Create your first network</a></p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Analyses -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-purple)"></i>
+                Recent Analyses
+                <a href="{% url 'analysis:analysis_list' %}" class="btn btn-ghost btn-sm ms-auto">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_analyses %}
+                    {% for r in recent_analyses %}
+                    <div class="analysis-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <a href="{% url 'analysis:analysis_detail' r.pk %}" style="color: var(--text-primary); text-decoration: none; font-weight: 500; font-size: 13px;">
+                                    {{ r.topology.name }}
+                                </a>
+                                <div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">{{ r.created_at|timesince }} ago</div>
+                            </div>
+                            <span class="badge badge-{{ r.risk_color }}">{{ r.risk_score|floatformat:0 }}/100</span>
+                        </div>
+                        <div class="risk-meter mt-2">
+                            <div class="risk-fill" style="width: {{ r.risk_score }}%;
+                                background: {% if r.risk_score >= 70 %}var(--accent-red){% elif r.risk_score >= 40 %}var(--accent-yellow){% else %}var(--accent-green){% endif %}"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="padding: 24px 12px">
+                        <i class="fa-solid fa-chart-network" style="font-size: 28px"></i>
+                        <p>No analyses yet. Run your first analysis.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick guide -->
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-lightbulb" style="color: var(--accent-yellow)"></i>
+                Quick Start Guide
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div style="display:flex;gap:14px;align-items:flex-start">
+                            <div style="width:32px;height:32px;background:rgba(59,130,246,0.15);color:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">1</div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;margin-bottom:4px">Create a Network</div>
+                                <div style="color:var(--text-muted);font-size:12px">Define a network topology and add nodes (routers, switches, endpoints) and their connections.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="display:flex;gap:14px;align-items:flex-start">
+                            <div style="width:32px;height:32px;background:rgba(16,185,129,0.15);color:var(--accent-green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">2</div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;margin-bottom:4px">Configure Rules</div>
+                                <div style="color:var(--text-muted);font-size:12px">Create customizable rulesets with thresholds for latency, bandwidth, reliability, and redundancy.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="display:flex;gap:14px;align-items:flex-start">
+                            <div style="width:32px;height:32px;background:rgba(139,92,246,0.15);color:var(--accent-purple);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">3</div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;margin-bottom:4px">Run Analysis</div>
+                                <div style="color:var(--text-muted);font-size:12px">Identify failure points, optimal routes, and get device placement recommendations.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

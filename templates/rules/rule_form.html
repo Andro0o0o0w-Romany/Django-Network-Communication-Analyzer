@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Rule{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'rules:ruleset_list' %}">Rulesets</a></li>
+<li class="breadcrumb-item"><a href="{% url 'rules:ruleset_detail' ruleset.pk %}">{{ ruleset.name }}</a></li>
+<li class="breadcrumb-item active">{{ action }} Rule</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="page-header">
+            <h1><i class="fa-solid fa-list-check me-2" style="color: var(--accent-purple)"></i>{{ action }} Rule</h1>
+            <p>in <strong>{{ ruleset.name }}</strong></p>
+        </div>
+
+        <!-- Rule type guide -->
+        <div class="card mb-4" style="border-color: rgba(59,130,246,0.2)">
+            <div class="card-body" style="padding:14px">
+                <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Rule Type Guide</div>
+                <div id="rule-guide" style="font-size:12px;color:var(--text-secondary)">
+                    Select a rule type to see its description and threshold meaning.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Rule Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g. Max Link Latency Check" required
+                                   value="{{ rule.name|default:'' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Rule Type *</label>
+                            <select name="rule_type" class="form-select" id="rule-type-select">
+                                {% for val, label in rule_types %}
+                                <option value="{{ val }}" {% if rule.rule_type == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" id="threshold-label">Threshold *</label>
+                            <input type="number" name="threshold" class="form-control" step="any" required
+                                   value="{{ rule.threshold|default:'' }}">
+                            <div class="form-text" id="threshold-hint">Numeric threshold value</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Severity</label>
+                            <select name="severity" class="form-select">
+                                {% for val, label in severity_choices %}
+                                <option value="{{ val }}" {% if rule.severity == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_enabled" id="isEnabled"
+                                       {% if rule.is_enabled or not rule %}checked{% endif %}>
+                                <label class="form-check-label" for="isEnabled" style="font-size:13px">Rule is Enabled</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Optional explanation of this rule...">{{ rule.description|default:'' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-check me-1"></i> {{ action }} Rule
+                        </button>
+                        <a href="{% url 'rules:ruleset_detail' ruleset.pk %}" class="btn btn-ghost">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ruleGuides = {
+    'max_latency': { label: 'Max Latency (ms)', hint: 'ms — flag links exceeding this latency', desc: 'Flags any connection whose latency exceeds this threshold in milliseconds.' },
+    'min_bandwidth': { label: 'Min Bandwidth (Mbps)', hint: 'Mbps', desc: 'Flags connections whose bandwidth falls below this minimum.' },
+    'min_reliability': { label: 'Min Reliability (%)', hint: '0–100 percent', desc: 'Flags links with reliability percentage below this value.' },
+    'max_distance': { label: 'Max Distance (m)', hint: 'meters', desc: 'Flags links that exceed this physical distance.' },
+    'min_redundancy': { label: 'Min Redundant Paths', hint: 'number of paths', desc: 'Flags node pairs that have fewer than this many distinct paths between them.' },
+    'max_connections': { label: 'Max Connections per Node', hint: 'integer', desc: 'Flags nodes with more connections (degree) than this threshold.' },
+    'min_connections': { label: 'Min Connections per Node', hint: 'integer', desc: 'Flags nodes with fewer connections than this threshold.' },
+    'max_hop_count': { label: 'Max Hop Count', hint: 'integer', desc: 'Flags any shortest path between two nodes that has more hops than this.' },
+    'max_node_load': { label: 'Max Load Factor', hint: 'connections / capacity ratio', desc: 'Flags nodes where the load factor (connections/capacity) exceeds this value.' },
+    'min_path_diversity': { label: 'Min Path Diversity', hint: 'number of alternative paths', desc: 'Flags node pairs with fewer distinct paths (path diversity) than this minimum.' },
+    'critical_backup': { label: 'Backup threshold', hint: 'degree threshold', desc: 'Flags critical nodes (above degree threshold) that lack a redundant backup.' },
+    'max_single_bandwidth': { label: 'Max Bandwidth (Mbps)', hint: 'Mbps upper limit', desc: 'Flags connections that exceed this bandwidth, potentially indicating oversized links.' },
+};
+
+function updateGuide() {
+    const sel = document.getElementById('rule-type-select').value;
+    const guide = ruleGuides[sel] || { label: 'Threshold', hint: 'Numeric value', desc: 'Select a rule type to see its description.' };
+    document.getElementById('threshold-label').textContent = guide.label + ' *';
+    document.getElementById('threshold-hint').textContent = guide.hint;
+    document.getElementById('rule-guide').textContent = guide.desc;
+}
+
+document.getElementById('rule-type-select').addEventListener('change', updateGuide);
+updateGuide();
+</script>
+{% endblock %}

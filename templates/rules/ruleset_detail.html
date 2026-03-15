@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}{{ ruleset.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'rules:ruleset_list' %}">Rulesets</a></li>
+<li class="breadcrumb-item active">{{ ruleset.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header" style="margin-bottom:0">
+        <h1><i class="fa-solid fa-sliders me-2" style="color: var(--accent-purple)"></i>{{ ruleset.name }}
+            {% if ruleset.is_default %}<span class="badge badge-success ms-2" style="font-size:12px">Default</span>{% endif %}
+        </h1>
+        {% if ruleset.description %}<p>{{ ruleset.description }}</p>{% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'rules:ruleset_edit' ruleset.pk %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+        <a href="{% url 'rules:rule_create' ruleset.pk %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>Add Rule</a>
+    </div>
+</div>
+
+<!-- Quick stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-purple)">{{ rules|length }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Total Rules</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-green)">{{ ruleset.active_rules_count }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Active</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-red)">
+                {% with count=0 %}{% for r in rules %}{% if r.severity == 'critical' %}{{ forloop.counter }}{% endif %}{% endfor %}{% endwith %}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Critical</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="padding:16px">
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent)">{{ ruleset.analyses.count }}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Analyses Used</div>
+        </div>
+    </div>
+</div>
+
+{% if rules %}
+<div class="card">
+    <div class="card-header">
+        <i class="fa-solid fa-list-check" style="color:var(--accent-purple)"></i>
+        Rules
+        <a href="{% url 'rules:rule_create' ruleset.pk %}" class="btn btn-primary btn-sm ms-auto">
+            <i class="fa-solid fa-plus me-1"></i> Add Rule
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Enabled</th>
+                    <th>Rule Name</th>
+                    <th>Type</th>
+                    <th>Threshold</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr id="rule-row-{{ rule.pk }}" {% if not rule.is_enabled %}style="opacity:0.5"{% endif %}>
+                    <td>
+                        <div class="form-check form-switch" style="margin:0;padding-left:2.5em">
+                            <input class="form-check-input rule-toggle" type="checkbox" id="toggle-{{ rule.pk }}"
+                                   {% if rule.is_enabled %}checked{% endif %}
+                                   data-rule-id="{{ rule.pk }}">
+                        </div>
+                    </td>
+                    <td style="font-weight:500;font-size:13px">{{ rule.name }}</td>
+                    <td><code style="font-size:11px;color:var(--accent)">{{ rule.rule_type }}</code></td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ rule.threshold }}</td>
+                    <td><span class="badge badge-{{ rule.severity_color }}">{{ rule.get_severity_display }}</span></td>
+                    <td style="color:var(--text-muted);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rule.description|default:"—" }}</td>
+                    <td>
+                        <a href="{% url 'rules:rule_edit' rule.pk %}" class="btn btn-ghost btn-sm me-1"><i class="fa-solid fa-pen"></i></a>
+                        <form method="post" action="{% url 'rules:rule_delete' rule.pk %}" style="display:inline" onsubmit="return confirm('Delete rule {{ rule.name }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+    <div class="empty-state">
+        <i class="fa-solid fa-list-check"></i>
+        <p>No rules yet. Add rules to enable analysis checks.</p>
+        <a href="{% url 'rules:rule_create' ruleset.pk %}" class="btn btn-primary mt-3"><i class="fa-solid fa-plus me-1"></i> Add First Rule</a>
+    </div>
+</div></div>
+{% endif %}
+
+<!-- Rule Type Reference -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="fa-solid fa-book" style="color:var(--accent-yellow)"></i>
+        Rule Type Reference
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for val, label in rule_types %}
+            <div class="col-md-6">
+                <div style="display:flex;gap:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px">
+                    <code style="font-size:11px;color:var(--accent);min-width:160px;flex-shrink:0">{{ val }}</code>
+                    <span style="font-size:12px;color:var(--text-secondary)">{{ label }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.rule-toggle').forEach(toggle => {
+    toggle.addEventListener('change', async function() {
+        const ruleId = this.dataset.ruleId;
+        const row = document.getElementById(`rule-row-${ruleId}`);
+        const resp = await fetch(`/rules/rules/${ruleId}/toggle/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const data = await resp.json();
+        row.style.opacity = data.enabled ? '1' : '0.5';
+    });
+});
+</script>
+{% endblock %}
